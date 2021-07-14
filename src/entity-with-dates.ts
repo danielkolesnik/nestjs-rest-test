@@ -1,6 +1,4 @@
-import { BaseEntity } from './base-entity';
-
-export class EntityWithDates {
+export interface EntityWithDates {
   createdAt: Date;
 
   updatedAt: Date;
