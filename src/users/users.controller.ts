@@ -1,4 +1,4 @@
-import { Controller, Get, Header, HostParam, Param } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './users.model';
 
@@ -6,7 +6,7 @@ import { User } from './users.model';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get('')
+  @Get()
   // @RequestMapping({ path: 'list', method: RequestMethod.GET })
   getUsersList(): Promise<User[]> {
     return this.usersService.getList();
@@ -16,5 +16,22 @@ export class UsersController {
   getUser(@Param('id') id: number): Promise<User> {
     console.log(id);
     return this.usersService.getItem(id);
+  }
+
+  @Post()
+  createUser(@Body() newUserDTO: User): Promise<User> {
+    console.log(newUserDTO);
+    return this.usersService.create(newUserDTO);
+  }
+
+  @Put()
+  updateUser(@Body() userDTO: User): Promise<User> {
+    console.log(userDTO);
+    return this.usersService.update(userDTO);
+  }
+
+  @Delete(':id')
+  deleteUser(@Param('id') id: number): Promise<number> {
+    return this.usersService.delete(id);
   }
 }
