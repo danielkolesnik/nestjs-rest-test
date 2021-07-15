@@ -16,6 +16,10 @@ export default class ConfigService {
     console.log(process.env.NODE_ENV, this.envConfig);
   }
 
+  public getApiPort() {
+    return this.envConfig.API_PORT;
+  }
+
   /*
 	  Ensures all needed variables are set, and returns the validated JavaScript object
 	  including the applied default values.
