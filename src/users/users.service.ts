@@ -1,8 +1,11 @@
 import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
-import { User } from './users.model';
-import { first } from 'rxjs';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
+// local dependencies
+import { User } from './users.model';
+import { UserCreateDTO, UserEditDTO, UserViewDTO } from './users.dto';
+import { UsersFilteredResponse } from '../utils/filtered-response';
+import { NameFilteredRequest } from '../utils/filtered-request';
 
 @Injectable()
 export class UsersService {
@@ -10,10 +13,39 @@ export class UsersService {
     @InjectRepository(User) private usersRepository: Repository<User>,
   ) {}
 
-  async getList(): Promise<User[]> {
-    const result: Promise<User[]> = this.usersRepository.find();
+  async getList(): Promise<UserViewDTO[]> {
+    const items = await this.usersRepository.find();
+
+    // Convert Entities List to DTOs List
+    const result = items.map((item) => UserViewDTO.of(item));
 
     return result;
+  }
+
+  async getListFiltered(
+    filteredRequest: NameFilteredRequest,
+  ): Promise<UsersFilteredResponse> {
+    const filteredResponse = new UsersFilteredResponse();
+
+    const namePattern =
+      filteredRequest.filter && filteredRequest.filter.name
+        ? filteredRequest.filter.name
+        : '';
+
+    // Paged result is an array with entities and count
+    const pagedResult = await this.usersRepository.findAndCount({
+      take: filteredRequest.size,
+      skip: filteredRequest.size * filteredRequest.page,
+      where: { name: Like('%' + namePattern + '%') },
+      order: { id: 'ASC' },
+    });
+    // Convert Entities to DTOs List
+    pagedResult[0] = pagedResult[0].map((item) => UserViewDTO.of(item));
+
+    // Update filteredResponse with request data and results
+    filteredResponse.fromRequestAndPaged(filteredRequest, pagedResult);
+
+    return filteredResponse;
   }
 
   async getItem(id: number): Promise<User> {
@@ -26,34 +58,33 @@ export class UsersService {
     }
   }
 
-  async create(newUser: User): Promise<User> {
-    if (newUser.id) {
-      throw new BadRequestException('Id must be null!');
-    }
-    // const existingUser = await this.usersRepository.findOne({ name: newUserDTO.name });
-    // if (existingUser) {
-    //   throw new BadRequestException(`User with name ${newUserDTO.name} already exists`)
-    // }
-    // From DTO to User
-    // const newUser = this.usersRepository.create(newUserDTO);
-    // const savedResult = await this.usersRepository.save(newUser);s
+  async create(newUserDTO: UserCreateDTO): Promise<UserEditDTO> {
+    // Create new Item
+    const newUser = this.usersRepository.create(newUserDTO);
     const savedResult = await this.usersRepository.save(newUser);
 
-    return savedResult;
+    // Convert Entity to DTO
+    const result = UserEditDTO.of(savedResult);
+
+    return result;
   }
 
-  async update(user: User): Promise<User> {
-    if (!user.id) {
+  async update(userDTO: UserEditDTO): Promise<UserEditDTO> {
+    if (!userDTO.id) {
       throw new BadRequestException(
-        `Expecting a valid "id", but got [${user.id}]!`,
+        `Expecting a valid "id", but got [${userDTO.id}]!`,
       );
     }
-    const existingUser = await this.getItem(user.id);
-    // update some updatable fields
-    existingUser.name = user.name;
-    const savedResult = this.usersRepository.save(existingUser);
+    const existingUser = await this.getItem(userDTO.id);
 
-    return savedResult;
+    // Update editable fields
+    existingUser.name = userDTO.name;
+    const savedResult = await this.usersRepository.save(existingUser);
+
+    // Convert Entity to DTO
+    const result = UserEditDTO.of(savedResult);
+
+    return result;
   }
 
   async delete(id: number): Promise<number> {
@@ -63,7 +94,7 @@ export class UsersService {
 
     const existingUser = await this.getItem(id);
 
-    this.usersRepository.delete(existingUser.id);
+    await this.usersRepository.delete(existingUser.id);
 
     return existingUser.id;
   }
