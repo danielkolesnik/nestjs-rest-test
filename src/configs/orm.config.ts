@@ -1,35 +1,27 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import { join } from 'path';
 import { ConnectionOptions } from 'typeorm';
 
+const baseDir = join(__dirname, '..');
+
 const config: ConnectionOptions = {
-  type: 'postgres',
-  host: 'localhost',
-  port: 5432,
-  username: 'dkolesnik',
-  password: 'Hgnd_hdnsj928',
-  database: 'nestjs_rest_test',
-  logging: 'all',
-  entities: [join(__dirname, '/../**/*.model.{ts,js}')],
+  type: process.env.DATABASE_TYPE,
+  host: process.env.DATABASE_HOST,
+  port: Number(process.env.DATABASE_PORT),
+  username: process.env.DATABASE_USERNAME,
+  password: process.env.DATABASE_PASSWORD,
+  database: process.env.DATABASE_NAME,
+  logging: process.env.DATABASE_LOGGING,
+  entities: [join(baseDir, '/**/*.model.{ts,js}')],
   synchronize: false,
   migrationsRun: true,
-  migrations: [join(__dirname, '..', 'db/migrations/**/*{.ts,.js}')],
+  migrations: [join(baseDir, 'db/migrations/**/*{.ts,.js}')],
   cli: {
     migrationsDir: 'src/db/migrations',
   },
 };
 
-// this config is used in 2 cases (app run and migration performing)
-// and paths of directories are different for 2 cases...
-function getMigrationDirectory() {
-  const directory =
-    process.env.NODE_ENV === 'migration' ? __dirname : join(__dirname, '..');
-  const migrationDirectory = join(directory, 'db/migrations/**/*{.ts,.js}');
-
-  console.log(
-    `\n~~~~~~~~~\n~~~~~~~~~~\n${__dirname}\n${migrationDirectory}\n~~~~~~~\n~~~~~~~~\n`,
-  );
-
-  return migrationDirectory;
-}
+console.log(config);
 
 export default config;
